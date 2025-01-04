@@ -3,11 +3,10 @@ import psycopg2
 
 app = Flask(__name__)
 
-# تنظیمات اتصال به دیتابیس
 DB_CONFIG = {
     "dbname": "trading_webhook",
     "user": "postgres",
-    "password": "Data__Password",  # جایگزین کنید
+    "password": "Data__Password",  
     "host": "localhost",
     "port": 5432
 }
