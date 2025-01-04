@@ -1,34 +1,44 @@
-import os
 from flask import Flask, request, jsonify
 import psycopg2
-from psycopg2.extras import Json
 
 app = Flask(__name__)
 
-# تنظیمات اتصال به دیتابیس از طریق متغیر محیطی
-DB_URL = os.getenv('DATABASE_URL')
+# تنظیمات اتصال به دیتابیس
+DB_CONFIG = {
+    "dbname": "trading_webhook",
+    "user": "postgres",
+    "password": "Data__Password",  # جایگزین کنید
+    "host": "localhost",
+    "port": 5432
+}
 
-def save_to_database(payload):
-    conn = psycopg2.connect(DB_URL)
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO webhook_data (payload) VALUES (%s)",
-        [Json(payload)]
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
-
+# اتصال به دیتابیس
+def get_db_connection():
+    return psycopg2.connect(**DB_CONFIG)
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    try:
-        data = request.json
-        if not data:
-            return jsonify({'error': 'Invalid payload'}), 400
-        save_to_database(data)
-        return jsonify({'message': 'Data saved successfully'}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    # دریافت داده به صورت متن ساده
+    data = request.data.decode('utf-8')  # تبدیل داده‌های ورودی به رشته
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    if not data:
+        return jsonify({"error": "No data received"}), 400
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # ذخیره داده در جدول signals
+        cur.execute(
+            """
+            INSERT INTO signals (data) VALUES (%s)
+            """,
+            (data,)  # ذخیره داده به صورت رشته در ستون 'data'
+        )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({"message": "Data saved successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
